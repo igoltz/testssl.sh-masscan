@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # Import testssl.sh CSV to ELasticSearch
 
-from elasticsearch_dsl import DocType, Object, Date, String, Integer, Short, Boolean
+from elasticsearch_dsl import DocType, Object, Date, Keyword, Integer, Short, Boolean
 from datetime import datetime
 from tzlocal import get_localzone
 import csv
@@ -41,38 +41,38 @@ class DocTestSSLResult(DocType):
     class Meta:
         doc_type = "TestSSLResult"
 
-    source = String(fields={'raw': String(index='not_analyzed')})
+    source = Keyword(fields={'raw': Keyword()})
     result = Boolean()
     timestamp = Date()
-    ip = String(index='not_analyzed')
-    hostname = String(index='not_analyzed')
+    ip = Keyword()
+    hostname = Keyword()
     port = Integer()
-    svcid = String(index='not_analyzed')
-    protocols = String(index='not_analyzed', multi=True)
-    ciphers = String(multi=True, fields={'raw': String(index='not_analyzed')})
-    ciphertests = String(index='not_analyzed', multi=True)
+    svcid = Keyword()
+    protocols = Keyword(multi=True)
+    ciphers = Keyword(multi=True, fields={'raw': Keyword()})
+    ciphertests = Keyword(multi=True)
     serverpref = Object(
             properties = {
                 "cipher_order": Boolean(),
-                "protocol": String(index='not_analyzed'),
-                "cipher": String(fields={'raw': String(index='not_analyzed')})
+                "protocol": Keyword(),
+                "cipher": Keyword(fields={'raw': Keyword()})
                 })
     cert = Object(
             properties = {
                 "keysize": Short(),
-                "signalgo": String(fields={'raw': String(index='not_analyzed')}),
-                "md5_fingerprint": String(index='not_analyzed'),
-                "sha1_fingerprint": String(index='not_analyzed'),
-                "sha256_fingerprint": String(index='not_analyzed'),
-                "cn": String(fields={'raw': String(index='not_analyzed')}),
-                "san": String(multi=True, fields={'raw': String(index='not_analyzed')}),
-                "issuer": String(fields={'raw': String(index='not_analyzed')}),
+                "signalgo": Keyword(fields={'raw': Keyword()}),
+                "md5_fingerprint": Keyword(),
+                "sha1_fingerprint": Keyword(),
+                "sha256_fingerprint": Keyword(),
+                "cn": Keyword(fields={'raw': Keyword()}),
+                "san": Keyword(multi=True, fields={'raw': Keyword()}),
+                "issuer": Keyword(fields={'raw': Keyword()}),
                 "ev": Boolean(),
                 "expiration": Date(),
-                "ocsp_uri": String(fields={'raw': String(index='not_analyzed')}),
+                "ocsp_uri": Keyword(fields={'raw': Keyword()}),
                 "ocsp_stapling": Boolean(),
                 })
-    vulnerabilities = String(index='not_analyzed', multi=True)
+    vulnerabilities = Keyword(multi=True)
 
     def parseCSVLine(self, line):
         if line['id'] == "id":
