@@ -12,7 +12,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 tz = get_localzone()
 reDefaultFilename = re.compile("(?:^|/)(?P<ip>\d+\.\d+\.\d+\.\d+)(:(?P<port>\d+))?-(?P<datetime>\d{8}-\d{4})\.csv$")
-reProtocol = re.compile("^(?:sslv\\d|tls\\d(?:_\\d)?)$")
+reProtocol = re.compile("^(?:SSLv\\d|TLS\\d(?:_\\d)?)$")
 reCipherTests = re.compile("^std_(.*)$")
 reIpHostColumn = re.compile("^(.*)/(.*)$")
 reCipherColumnName = re.compile("^cipher_")
@@ -57,7 +57,7 @@ class DocTestSSLResult(DocType):
                 })
     cert = Object(
             properties = {
-                "keysize": Short(),
+                "keysize": Keyword(),
                 "signalgo": Keyword(fields={'raw': Keyword()}),
                 "md5_fingerprint": Keyword(),
                 "sha1_fingerprint": Keyword(),
@@ -66,7 +66,7 @@ class DocTestSSLResult(DocType):
                 "san": Keyword(multi=True, fields={'raw': Keyword()}),
                 "issuer": Keyword(fields={'raw': Keyword()}),
                 "ev": Boolean(),
-                "expiration": Date(),
+                "expiration": Keyword(fields={'raw': Keyword()}),
                 "ocsp_uri": Keyword(fields={'raw': Keyword()}),
                 "ocsp_stapling": Boolean(),
                 })
@@ -76,7 +76,7 @@ class DocTestSSLResult(DocType):
         if line['id'] == "id":
             return
         if not self.ip or not self.hostname or not self.port:   # host, ip and port
-            m = reIpHostColumn.search(line['host'])
+            m = reIpHostColumn.search(line['fqdn/ip'])
             if m:
                 self.hostname, self.ip = m.groups()
             self.port = int(line['port'])
@@ -96,61 +96,34 @@ class DocTestSSLResult(DocType):
                 self.ciphertests.append(m.group(1))
         elif line['id'] == "order":                                 # server prefers cipher
             self.serverpref.cipher_order = bool(reOk.search(line['finding']))
-        elif line['id'] == "order_proto":                           # preferred protocol
-            m = reDefaultProtocol.search(line['finding'])
-            if m:
-                self.serverpref.protocol = m.group(1)
-        elif line['id'] == "order_cipher":                          # preferred cipher
-            m = reDefaultCipher.search(line['finding'])
-            if m:
-                self.serverpref.cipher = m.group(1)
-        elif line['id'] == "key_size":                              # certificate key size
-            m = reKeySize.search(line['finding'])
-            if m:
-                self.cert.keysize = int(m.group(1))
-        elif line['id'] == "algorithm":                             # certificate sign algorithm
-            m = reSignAlgorithm.search(line['finding'])
-            if m:
-                self.cert.signalgo = m.group(1)
-        elif line['id'] == "fingerprint":                           # certificate fingerprints
-            m = reFPMD5.search(line['finding'])
-            if m:
-                self.cert.md5_fingerprint = m.group(1)
-            m = reFPSHA1.search(line['finding'])
-            if m:
-                self.cert.sha1_fingerprint = m.group(1)
-            m = reFPSHA256.search(line['finding'])
-            if m:
-                self.cert.sha256_fingerprint = m.group(1)
-        elif line['id'] == "cn":                                    # certificate CN
-            m = reCN.search(line['finding'])
-            if m:
-                self.cert.cn = m.group(1)
-        elif line['id'] == "san":                                   # certificate SAN
-            m = reSAN.search(line['finding'])
-            if m:
-                sans = m.group(1)
-                for san in sans.split(" "):
-                    if san != "--":
-                        self.cert.san.append(san)
-        elif line['id'] == "issuer":                                # certificate issuer
-            m = reIssuer.search(line['finding'])
-            if m:
-                self.cert.issuer = m.group(1)
-        elif line['id'] == "ev":                                    # certificate extended validation
+        elif line['id'] == "protocol_negotiated":                           # preferred protocol
+            self.serverpref.protocol = line['finding']
+        elif line['id'] == "cipher_negotiated":                          # preferred cipher
+            self.serverpref.cipher = line['finding']
+        elif line['id'] == "cert_keySize":                              # certificate key size
+            self.cert.keysize = line['finding']
+        elif line['id'] == "cert_signatureAlgorithm":                             # certificate sign algorithm
+            self.cert.signalgo = line['finding']
+        elif line['id'] == "cert_fingerprintSHA1":                           # certificate fingerprints
+            self.cert.sha1_fingerprint = line['finding']
+        elif line['id'] == "cert_fingerprintSHA256":
+            self.cert.sha256_fingerprint = line['finding']
+        elif line['id'] == "cert_commonName":                                    # certificate CN
+            self.cert.cn = line['finding']
+        elif line['id'] == "cert_subjectAltName":                                   # certificate SAN
+            sans = line['finding']
+            for san in sans.split(" "):
+                if san != "--":
+                    self.cert.san.append(san)
+        elif line['id'] == "cert_caIssuers":                                # certificate issuer
+            self.cert.issuer = line['finding']
+        elif line['id'] == "cert_certificatePolicies_EV":                                    # certificate extended validation
             self.cert.ev = bool(reYes.search(line['finding']))
-        elif line['id'] == "expiration":                            # certificate expiration
-            m = reExpiration.search(line['finding'])
-            if m:
-                unparsedDate = m.group(1)
-                self.cert.expiration = datetime.strptime(unparsedDate, "%Y-%m-%d %H:%M %z")
-        elif line['id'] == "ocsp_uri":                              # certificate OCSP URI
-            m = reOCSPURI.search(line['finding'])
-            if m:
-                self.cert.ocsp_uri = m.group(1)
-            else:
-                self.cert.ocsp_uri = "-"
-        elif line['id'] == "ocsp_stapling":                         # certificate OCSP stapling
+        elif line['id'] == "cert_expiration_status":                            # certificate expiration
+            self.cert.expiration = line['finding']
+        elif line['id'] == "cert_ocspURL":                              # certificate OCSP URI
+            self.cert.ocsp_uri = line['finding']
+        elif line['id'] == "OCSP_stapling":                         # certificate OCSP stapling
             self.cert.ocsp_stapling = not bool(reNotOffered.search(line['finding']))
         elif line['id'] in ("heartbleed", "ccs", "secure_renego", "sec_client_renego", "crime", "breach", "poodle_ssl", "fallback_scsv", "freak", "DROWN", "logjam", "beast", "rc4") and reVulnerable.search(line['finding']):
             self.vulnerabilities.append(line['id'].upper())
@@ -162,7 +135,7 @@ class DocTestSSLResult(DocType):
                 self.ip = m.group('ip')
                 self.port = int(m.group('port') or 0)
                 self.timestamp = datetime.strptime(m.group('datetime'), "%Y%m%d-%H%M")
-        csvReader = csv.DictReader(csvfile, fieldnames=("id", "host", "port", "severity", "finding"), delimiter=',', quotechar='"')
+        csvReader = csv.DictReader(csvfile, fieldnames=("id", "fqdn/ip", "port", "severity", "finding", "cve", "cwe"), delimiter=',', quotechar='"')
         for line in csvReader:
             self.parseCSVLine(line)
 
