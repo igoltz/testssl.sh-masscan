@@ -143,7 +143,7 @@ class DocTestSSLResult(DocType):
             m = reExpiration.search(line['finding'])
             if m:
                 unparsedDate = m.group(1)
-                self.cert.expiration = datetime.strptime(unparsedDate, "%Y-%m-%d %H:%M %z") 
+                self.cert.expiration = datetime.strptime(unparsedDate, "%Y-%m-%d %H:%M %z")
         elif line['id'] == "ocsp_uri":                              # certificate OCSP URI
             m = reOCSPURI.search(line['finding'])
             if m:
