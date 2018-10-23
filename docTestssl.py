@@ -38,8 +38,6 @@ reYes = re.compile("yes", re.IGNORECASE)
 reVulnerable = re.compile("\\(NOT ok\\)", re.IGNORECASE)
 
 class DocTestSSLResult(DocType):
-    class Meta:
-        doc_type = "TestSSLResult"
 
     source = Keyword(fields={'raw': Keyword()})
     result = Boolean()
