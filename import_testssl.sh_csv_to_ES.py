@@ -10,10 +10,11 @@ from datetime import datetime
 argparser = argparse.ArgumentParser(description="Import testssl.sh CSV logs into ElasticSearch")
 argparser.add_argument("--elasticsearch", "-e", nargs="*", default="localhost", help="ElasticSearch host (default: %(default)s)")
 argparser.add_argument("--index", "-i", default="testssl-scan", help="ElasticSearch index (default: %(default)s)")
+argparser.add_argument("--ca_cert", "-c", help="ElasticSearch CA certificate")
 argparser.add_argument("files", nargs="+", help="List of testssl.sh logs in CSV format")
 args = argparser.parse_args()
 
-connections.create_connection(hosts=args.elasticsearch)
+connections.create_connection(hosts=args.elasticsearch,ca_certs=args.ca_cert)
 idx = Index(args.index)
 idx.doc_type(DocTestSSLResult)
 DocTestSSLResult.init()
